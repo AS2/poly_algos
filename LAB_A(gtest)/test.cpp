@@ -385,53 +385,110 @@ TEST (DeleteElementFromListByAddress_More3ElementList_returnTrue) {
   clearList(&list);
 }
 
-TEST (IterationList_EmptyList_returnFalse) {
+TEST(createIterator_EmptyList_returnTrue) {
   xorList_t list = { NULL, NULL };
+  xorIter_t iter;
 
-  ASSERT_EQ(IterationList(&list), 0);
-  ASSERT_EQ(list.first, nullptr);
-  ASSERT_EQ(list.second, nullptr);
+  ASSERT_EQ(createIterator(&iter, &list), 1);
+  ASSERT_EQ(iter.container, nullptr);
+  ASSERT_EQ(iter.next, nullptr);
 }
 
-TEST (IterationList_1ElementList_returnFalse) {
+TEST(createIterator_1ElemList_returnTrue) {
   xorList_t list = { NULL, NULL };
+  xorIter_t iter;
 
   AddElementToList(&list, "newElement1");
-  ASSERT_EQ(IterationList(&list), 0);
-  ASSERT_EQ(list.second, nullptr);
-
+  ASSERT_EQ(createIterator(&iter, &list), 1);
+  ASSERT_EQ(iter.container, list.first);
+  ASSERT_EQ(iter.next, nullptr);
+  
   clearList(&list);
 }
 
-TEST (IterationList_2ElementList_returnFalse) {
+TEST(createIterator_2andMoreElemList_returnTrue) {
   xorList_t list = { NULL, NULL };
+  xorIter_t iter;
 
   AddElementToList(&list, "newElement1");
   AddElementToList(&list, "newElement2");
-  ASSERT_EQ(IterationList(&list), 0);
-  ASSERT_EQ(list.first->xorAddress, 0);
-  ASSERT_EQ(list.second->xorAddress, 0);
+  ASSERT_EQ(createIterator(&iter, &list), 1);
+  ASSERT_EQ(iter.container, list.first);
+  ASSERT_EQ(iter.next, list.second);
 
   clearList(&list);
 }
 
-TEST (IterationList_3andMoreElementList_returnTrue) {
+TEST(getFromIter_EmptyList_returnFalse) {
   xorList_t list = { NULL, NULL };
-  list_t* tmp1, * tmp2, * tmp3;
+  xorIter_t iter;
+
+  createIterator(&iter, &list);
+  ASSERT_EQ(getFromIter(iter), nullptr); // <-- "" == 0, ò.å. FALSE
+}
+
+TEST(getFromIter_1ElemList_returnValue) {
+  xorList_t list = { NULL, NULL };
+  xorIter_t iter;
+
+  AddElementToList(&list, "newElement1");
+  createIterator(&iter, &list);
+  ASSERT_EQ(strcmp(getFromIter(iter), "newElement1"), 0);
+  clearList(&list);
+}
+
+TEST(getFromIter_2andMoreElemList_returnValue) {
+  xorList_t list = { NULL, NULL };
+  xorIter_t iter;
+
+  AddElementToList(&list, "newElement1");
+  AddElementToList(&list, "newElement2");
+  createIterator(&iter, &list);
+  ASSERT_EQ(strcmp(getFromIter(iter), "newElement1"), 0);
+  clearList(&list);
+}
+
+TEST(nextInIter_EmptyList_returnFalse) {
+  xorList_t list = { NULL, NULL };
+  xorIter_t iter;
+ 
+  createIterator(&iter, &list);
+  ASSERT_EQ(nextInIter(&iter), 0);
+}
+
+TEST(nextInIter_1ElemList_returnFalse) {
+  xorList_t list = { NULL, NULL };
+  xorIter_t iter;
+
+  AddElementToList(&list, "newElement1");
+  createIterator(&iter, &list);
+  ASSERT_EQ(nextInIter(&iter), 0);
+  clearList(&list);
+}
+
+TEST(nextInIter_2ElemList_returnTrue) {
+  xorList_t list = { NULL, NULL };
+  xorIter_t iter;
+
+  AddElementToList(&list, "newElement1");
+  AddElementToList(&list, "newElement2");
+  createIterator(&iter, &list);
+  ASSERT_EQ(nextInIter(&iter), 1);
+  ASSERT_EQ(strcmp(getFromIter(iter), "newElement2"), 0);
+  clearList(&list);
+}
+
+TEST(nextInIter_3andMoreElemList_returnFalse) {
+  xorList_t list = { NULL, NULL };
+  xorIter_t iter;
 
   AddElementToList(&list, "newElement1");
   AddElementToList(&list, "newElement2");
   AddElementToList(&list, "newElement3");
-
-  tmp1 = list.first;
-  tmp2 = list.second;
-  tmp3 = (list_t*)((int)list.first ^ list.second->xorAddress);
-
-  ASSERT_EQ(IterationList(&list), 1);
-
-  ASSERT_EQ(list.first, tmp2);
-  ASSERT_EQ(list.second, tmp3);
-  ASSERT_EQ((list_t*)((int)list.first ^ list.second->xorAddress), tmp1);
-
+  createIterator(&iter, &list);
+  ASSERT_EQ(nextInIter(&iter), 1);
+  ASSERT_EQ(strcmp(getFromIter(iter), "newElement2"), 0);
+  ASSERT_EQ(nextInIter(&iter), 1);
+  ASSERT_EQ(strcmp(getFromIter(iter), "newElement3"), 0);
   clearList(&list);
-}
+} 

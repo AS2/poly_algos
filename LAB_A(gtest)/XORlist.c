@@ -5,316 +5,340 @@
 
 #pragma warning(disable: 4996)
 
+static int initNewElementInList(list_t **newEl, char *newElement) {
+  if (!((*newEl) = (list_t*)malloc(sizeof(list_t))))
+    return FALSE;
+  strncpy((*newEl)->str, newElement, MAX_STR);
+  return TRUE;
+}
+
 int AddElementToList(xorList_t* list, char *newElement) {
-  list_t* tmp1, *tmp2, *tmp3, 
+  list_t *prev, *present, *next, 
     *newEl;
 
   if (strlen(newElement) >= MAX_STR)
-    return 0;
+    return FALSE;
 
   if (list->first == NULL) {
-    if (!(newEl = (list_t*)malloc(sizeof(list_t))))
-      return 0;
-    
-    strncpy(newEl->str, newElement, MAX_STR);
+    initNewElementInList(&newEl, newElement);
     newEl->xorAddress = 0;
 
     list->first = newEl;
-    return 1;
+    return TRUE;
   }
   else if (list->second == NULL) {
-    if (!(newEl = (list_t*)malloc(sizeof(list_t))))
-      return 0;
-
-    strncpy(newEl->str, newElement, MAX_STR);
+    initNewElementInList(&newEl, newElement);
     newEl->xorAddress = 0;
 
     list->second = newEl;
-    return 1;
+    return TRUE;
   }
   else if (list->first != NULL && list->second != NULL && (list->first->xorAddress == 0 && list->second->xorAddress == 0)) {
-    if (!(newEl = (list_t*)malloc(sizeof(list_t))))
-      return 0;
-
-    strncpy(newEl->str, newElement, MAX_STR);
+    initNewElementInList(&newEl, newElement);
     list->first->xorAddress = ((int)newEl ^ (int)list->second);
     list->second->xorAddress = ((int)list->first ^ (int)newEl);
     newEl->xorAddress = ((int)list->second ^ (int)list->first);
-    return 1;
+    return TRUE;
   }
   else {
-    if (!(newEl = (list_t*)malloc(sizeof(list_t))))
-      return 0;
-
-    strncpy(newEl->str, newElement, MAX_STR);
-
-    tmp1 = list->first;
-    tmp2 = tmp3 = list->second;
-    while ((list_t*)((int)tmp1 ^ (int)(tmp2->xorAddress)) != list->first) {
-      tmp3 = (list_t*)((int)tmp1 ^ (int)(tmp2->xorAddress));
-      tmp1 = tmp2;
-      tmp2 = tmp3;
+    initNewElementInList(&newEl, newElement);
+    prev = list->first;
+    present = next = list->second;
+    while ((list_t*)((int)prev ^ (int)(present->xorAddress)) != list->first) {
+      next = (list_t*)((int)prev ^ (int)(present->xorAddress));
+      prev = present;
+      present = next;
     }
-    tmp3->xorAddress = ((int)tmp1 ^ (int)newEl);
-    newEl->xorAddress = ((int)tmp3 ^ (int)list->first);
+    next->xorAddress = ((int)prev ^ (int)newEl);
+    newEl->xorAddress = ((int)next ^ (int)list->first);
     list->first->xorAddress = ((int)newEl ^ (int)list->second);
 
-    return 1;
+    return TRUE;
   }
 }
 
 int FindElementInListByKey(xorList_t* list, char* key) {
-  list_t* tmp1, * tmp2, * tmp3;
+  list_t* prev, * present, * next;
 
   if (strlen(key) >= MAX_STR)
-    return 0;
+    return FALSE;
 
   if (list->first == NULL)
-    return 0;
+    return FALSE;
   else if (list->second == NULL) {
     if (!strcmp(list->first->str, key))
-      return 1;
+      return TRUE;
     else
-      return 0;
+      return FALSE;
   }
   else {
     if (!strcmp(list->first->str, key))
-      return 1;
+      return TRUE;
     else if (!strcmp(list->second->str, key))
-      return 1;
+      return TRUE;
   
-    tmp1 = list->first;
-    tmp2 = tmp3 = list->second;
-    while ((list_t*)((int)tmp1 ^ (int)(tmp2->xorAddress)) != list->first) {
-      tmp3 = (list_t*)((int)tmp1 ^ (int)(tmp2->xorAddress));
-      tmp1 = tmp2;
-      tmp2 = tmp3;
-      if (!strcmp(tmp3->str, key))
-        return 1;
+    prev = list->first;
+    present = next = list->second;
+    while ((list_t*)((int)prev ^ (int)(present->xorAddress)) != list->first) {
+      next = (list_t*)((int)prev ^ (int)(present->xorAddress));
+      prev = present;
+      present = next;
+      if (!strcmp(next->str, key))
+        return TRUE;
     }
-    return 0;
+    return FALSE;
   }
+}
+
+static int DeleteElementFrom1ElemListByKey(xorList_t* list, char* key) {
+  if (!strcmp(list->first->str, key)) {
+    free(list->first);
+    list->first = NULL;
+    return TRUE;
+  }
+  else
+    return FALSE;
+}
+
+static int DeleteElementFrom2ElemListByKey(xorList_t* list, char* key) {
+  if (!strcmp(list->first->str, key)) {
+    free(list->first);
+    list->first = list->second;
+    list->second = NULL;
+    return TRUE;
+  }
+  else if (!strcmp(list->second->str, key)) {
+    free(list->second);
+    list->second = NULL;
+    return TRUE;
+  }
+  else
+    return FALSE;
+}
+
+static int DeleteElementFrom3ElemListByKey(xorList_t* list, char* key) {
+  list_t* next = (list_t *)((int)list->first ^ list->second->xorAddress);
+
+  if (!strcmp(list->first->str, key)) {
+    list->second->xorAddress = next->xorAddress = 0;
+    free(list->first);
+    list->first = list->second;
+    list->second = next;
+    return TRUE;
+  }
+  else if (!strcmp(list->second->str, key)) {
+    list->first->xorAddress = next->xorAddress = 0;
+    free(list->second);
+    list->second = next;
+    return TRUE;
+  }
+  if (!strcmp(next->str, key)) {
+    list->first->xorAddress = list->second->xorAddress = 0;
+    free(next);
+    return TRUE;
+  }
+  else
+    return FALSE;
 }
 
 int DeleteElementFromListByKey(xorList_t* list, char* key) {
-  list_t* tmp1, * tmp2, * tmp3, *tmp4;
+  list_t* prev, * present, * next, *afterNext;
 
   if (strlen(key) >= MAX_STR)
-    return 0;
+    return FALSE;
 
   // если 0 элементов
   if (list->first == NULL)
-    return 0;
+    return FALSE;
   // если 1 элемент
-  else if (list->second == NULL) {
-    if (!strcmp(list->first->str, key)) {
-      free(list->first);
-      list->first = NULL;
-      return 1;
-    }
-    else
-      return 0;
-  }
+  else if (list->second == NULL)
+    return DeleteElementFrom1ElemListByKey(list, key);
   // если 2 элемент
-  else if (list->first != NULL && list->second != NULL && (list->first->xorAddress == 0 && list->second->xorAddress == 0)) {
-    if (!strcmp(list->first->str, key)) {
-      free(list->first);
-      list->first = list->second;
-      list->second = NULL;
-      return 1;
-    }
-    else if (!strcmp(list->second->str, key)) {
-      free(list->second);
-      list->second = NULL;
-      return 1;
-    }
-    else
-      return 0;
-  }
+  else if (list->first != NULL && list->second != NULL && (list->first->xorAddress == 0 && list->second->xorAddress == 0))
+    return DeleteElementFrom2ElemListByKey(list, key);
   // если 3 и более элемента
   else {
-    tmp1 = list->first;
-    tmp2 = list->second;
-    tmp3 = (list_t*)((int)tmp1 ^ tmp2->xorAddress);
+    prev = list->first;
+    present = list->second;
+    next = (list_t*)((int)prev ^ present->xorAddress);
 
     // если 3 элемента
-    if ((list_t*)((int)tmp2 ^ tmp3->xorAddress) == list->first) {
-      if (!strcmp(list->first->str, key)) {
-        list->second->xorAddress = tmp3->xorAddress = 0;
-        free(list->first);
-        list->first = list->second;
-        list->second = tmp3;
-        return 1;
-      }
-      else if (!strcmp(list->second->str, key)) {
-        list->first->xorAddress = tmp3->xorAddress = 0;
-        free(list->second);
-        list->second = tmp3;
-        return 1;
-      }
-      if (!strcmp(tmp3->str, key)) {
-        list->first->xorAddress = list->second->xorAddress = 0;
-        free(tmp3);
-        return 1;
-      }
-      else
-        return 0;
-    }
+    if ((list_t*)((int)present ^ next->xorAddress) == list->first)
+      return DeleteElementFrom3ElemListByKey(list, key);
 
     // если больше 3х элементов
     if (!strcmp(list->first->str, key)) {
-      tmp1 = (list_t*)(list->first->xorAddress ^ (int)list->second);
-      tmp1->xorAddress = (tmp1->xorAddress ^ (int)list->first) ^ (int)list->second;
-      list->second->xorAddress = (int)tmp3 ^ (int)tmp1;
+      prev = (list_t*)(list->first->xorAddress ^ (int)list->second);
+      prev->xorAddress = (prev->xorAddress ^ (int)list->first) ^ (int)list->second;
+      list->second->xorAddress = (int)next ^ (int)prev;
       free(list->first);
       list->first = list->second;
-      list->second = tmp3;
-      return 1;
+      list->second = next;
+      return TRUE;
     }
     else if (!strcmp(list->second->str, key)) {
-      tmp1 = (list_t *)(list->first->xorAddress ^ (int)list->second);
-      tmp2 = (list_t *)((int)list->second ^ tmp3->xorAddress);
-      list->first->xorAddress = (int)tmp1 ^ (int)tmp3;
-      tmp3->xorAddress = (int)list->first ^ (int)tmp2;
+      prev = (list_t *)(list->first->xorAddress ^ (int)list->second);
+      present = (list_t *)((int)list->second ^ next->xorAddress);
+      list->first->xorAddress = (int)prev ^ (int)next;
+      next->xorAddress = (int)list->first ^ (int)present;
       free(list->second);
-      list->second = tmp3;
-      return 1;
+      list->second = next;
+      return TRUE;
     }
 
-    while ((list_t*)((int)tmp1 ^ (int)(tmp2->xorAddress)) != list->first) {
-      tmp3 = (list_t*)((int)tmp1 ^ (int)(tmp2->xorAddress));
-      if (!strcmp(tmp3->str, key)) {
-        tmp4 = (list_t *)((int)tmp2 ^ (int)(tmp3->xorAddress));
-        tmp2->xorAddress = (int)tmp1 ^ (int)(tmp4);
-        tmp4->xorAddress = (int)tmp2 ^ ((int)tmp3 ^ (int)(tmp4->xorAddress));
-        free(tmp3);
-        return 1;
+    while ((list_t*)((int)prev ^ (int)(present->xorAddress)) != list->first) {
+      next = (list_t*)((int)prev ^ (int)(present->xorAddress));
+      if (!strcmp(next->str, key)) {
+        afterNext = (list_t *)((int)present ^ (int)(next->xorAddress));
+        present->xorAddress = (int)prev ^ (int)(afterNext);
+        afterNext->xorAddress = (int)present ^ ((int)next ^ (int)(afterNext->xorAddress));
+        free(next);
+        return TRUE;
       }
-      tmp1 = tmp2;
-      tmp2 = tmp3;
+      prev = present;
+      present = next;
     }
-    return 0;
+    return FALSE;
   }
+}
+
+static int DeleteElementFrom3ElemListByAddress(xorList_t *list, int address) {
+  list_t* next = (list_t*)((int)list->first ^ list->second->xorAddress);
+
+  if (list->first->xorAddress == address) {
+    list->second->xorAddress = next->xorAddress = 0;
+    free(list->first);
+    list->first = list->second;
+    list->second = next;
+    return TRUE;
+  }
+  else if (list->second->xorAddress == address) {
+    list->first->xorAddress = next->xorAddress = 0;
+    free(list->second);
+    list->second = next;
+    return TRUE;
+  }
+  else if (next->xorAddress == address) {
+    list->first->xorAddress = list->second->xorAddress = 0;
+    free(next);
+    return TRUE;
+  }
+  else
+    return FALSE;
 }
 
 int DeleteElementFromListByAddress(xorList_t* list, int address) {
-  list_t* tmp1, * tmp2, * tmp3, *tmp4;
+  list_t* prev, * present, * next, *afterNext;
 
   // если у нас 0-2 элементов, то XOR список не сможет образоваться
-  if (list->first == NULL || list->second == NULL)
-    return 0;
-  else if (list->first->xorAddress == 0 && list->second->xorAddress == 0)
-      return 0;
+  if (list->first == NULL || list->second == NULL || (list->first->xorAddress == 0 && list->second->xorAddress == 0))
+    return FALSE;
   else {
-    tmp1 = list->first;
-    tmp2 = list->second;
-    tmp3 = (list_t*)((int)tmp1 ^ tmp2->xorAddress);
+    prev = list->first;
+    present = list->second;
+    next = (list_t*)((int)prev ^ present->xorAddress);
 
     // если 3 элемента
-    if ((list_t *)((int)tmp2 ^ tmp3->xorAddress) == list->first) {
-      if (list->first->xorAddress == address) {
-        list->second->xorAddress = tmp3->xorAddress = 0;
-        free(list->first);
-        list->first = list->second;
-        list->second = tmp3;
-        return 1;
-      }
-      else if (list->second->xorAddress == address) {
-        list->first->xorAddress = tmp3->xorAddress = 0;
-        free(list->second);
-        list->second = tmp3;
-        return 1;
-      }
-      else if (tmp3->xorAddress == address) {
-        list->first->xorAddress = list->second->xorAddress = 0;
-        free(tmp3);
-        return 1;
-      }
-      else
-        return 0;
-    }
+    if ((list_t *)((int)present ^ next->xorAddress) == list->first)
+      return DeleteElementFrom3ElemListByAddress(list, address);
 
     // если больше трех
     if (list->first->xorAddress == address) {
-      tmp1 = (list_t*)(list->first->xorAddress ^ (int)list->second);
-      tmp1->xorAddress = (tmp1->xorAddress ^ (int)list->first) ^ (int)list->second;
-      list->second->xorAddress = (int)tmp3 ^ (int)tmp1;
+      prev = (list_t*)(list->first->xorAddress ^ (int)list->second);
+      prev->xorAddress = (prev->xorAddress ^ (int)list->first) ^ (int)list->second;
+      list->second->xorAddress = (int)next ^ (int)prev;
       free(list->first);
       list->first = list->second;
-      list->second = tmp3;
-      return 1;
+      list->second = next;
+      return TRUE;
     }
     else if (list->second->xorAddress == address) {
-      tmp1 = (list_t*)(list->first->xorAddress ^ (int)list->second);
-      tmp2 = (list_t*)((int)list->second ^ tmp3->xorAddress);
-      list->first->xorAddress = (int)tmp1 ^ (int)tmp3;
-      tmp3->xorAddress = (int)list->first ^ (int)tmp2;
+      prev = (list_t*)(list->first->xorAddress ^ (int)list->second);
+      present = (list_t*)((int)list->second ^ next->xorAddress);
+      list->first->xorAddress = (int)prev ^ (int)next;
+      next->xorAddress = (int)list->first ^ (int)present;
       free(list->second);
-      list->second = tmp3;
-      return 1;
+      list->second = next;
+      return TRUE;
     }
 
-    while ((list_t*)((int)tmp1 ^ (int)(tmp2->xorAddress)) != list->first) {
-      tmp3 = (list_t*)((int)tmp1 ^ (int)(tmp2->xorAddress));
-      if (tmp3->xorAddress == address) {
-        tmp4 = (list_t*)((int)tmp2 ^ (int)(tmp3->xorAddress));
-        tmp2->xorAddress = (int)tmp1 ^ (int)(tmp4);
-        tmp4->xorAddress = (int)tmp2 ^ ((int)tmp3 ^ (int)(tmp4->xorAddress));
-        free(tmp3);
-        return 1;
+    while ((list_t*)((int)prev ^ (int)(present->xorAddress)) != list->first) {
+      next = (list_t*)((int)prev ^ (int)(present->xorAddress));
+      if (next->xorAddress == address) {
+        afterNext = (list_t*)((int)present ^ (int)(next->xorAddress));
+        present->xorAddress = (int)prev ^ (int)(afterNext);
+        afterNext->xorAddress = (int)present ^ ((int)next ^ (int)(afterNext->xorAddress));
+        free(next);
+        return TRUE;
       }
-      tmp1 = tmp2;
-      tmp2 = tmp3;
+      prev = present;
+      present = next;
     }
-    return 0;
+    return FALSE;
   }
 }
 
-int IterationList(xorList_t* list) {
-  list_t* tmp;
+int createIterator(xorIter_t* iter, xorList_t* list) {
+  iter->container = list->first;
+  iter->next = list->second;
+  return TRUE;
+}
 
-  if (list->first == NULL || list->second == NULL || (list->first->xorAddress == 0 && list->second->xorAddress == 0))
-    return 0;
-  else {
-    tmp = (list_t *)((int)list->first ^ list->second->xorAddress);
-    list->first = list->second;
-    list->second = tmp;
-    return 1;
+char* getFromIter(xorIter_t iter) {
+  if (iter.container == NULL)
+    return FALSE;
+  else
+    return iter.container->str;
+}
+
+int nextInIter(xorIter_t* iter) {
+  list_t* tmp;
+  if (iter->container != NULL && iter->next != NULL && (iter->container->xorAddress != 0 && iter->next->xorAddress != 0)) {
+    tmp = (list_t*)((int)iter->container ^ iter->next->xorAddress);
+    iter->container = iter->next;
+    iter->next = tmp;
+    return TRUE;
   }
+  else if (iter->container != NULL && iter->next != NULL && !(iter->container->xorAddress != 0 && iter->next->xorAddress != 0)) {
+    iter->container = iter->next;
+    iter->next = NULL;
+    return TRUE;
+  }
+  return FALSE;
 }
 
 int clearList(xorList_t* list) {
-  list_t* tmp1, * tmp2;
+  list_t* next, * present;
 
   if (list->first == NULL)
-    return 1;
+    return TRUE;
   else if (list->second == NULL) {
     free(list->first);
     list->first = NULL;
-    return 1;
+    return TRUE;
   }
   else if (list->first != NULL && list->second != NULL && (list->first->xorAddress == 0 && list->second->xorAddress == 0)) {
     free(list->first);
     free(list->second);
     list->first = list->second = NULL;
-    return 1;
+    return TRUE;
   }
   else {
-    tmp1 = (list_t*)((int)list->first ^ list->second->xorAddress);
-    tmp2 = (list_t*)((int)list->second ^ tmp1->xorAddress);
+    present = (list_t*)((int)list->first ^ list->second->xorAddress);
+    next = (list_t*)((int)list->second ^ present->xorAddress);
    
-    while (tmp2 != list->first) {
-      list->second->xorAddress = (int)list->first ^ (int)tmp2;
-      tmp2->xorAddress = (int)list->second ^ ((int)tmp1 ^ tmp2->xorAddress);
-      free(tmp1);
+    while (next != list->first) {
+      list->second->xorAddress = (int)list->first ^ (int)next;
+      next->xorAddress = (int)list->second ^ ((int)present ^ next->xorAddress);
+      free(present);
 
-      tmp1 = (list_t*)((int)list->first ^ list->second->xorAddress);
-      tmp2 = (list_t*)((int)list->second ^ tmp1->xorAddress);
+      present = (list_t*)((int)list->first ^ list->second->xorAddress);
+      next = (list_t*)((int)list->second ^ present->xorAddress);
     }
-    free(tmp1);
+    free(present);
     free(list->second);
     free(list->first);
     list->first = list->second = NULL;
-    return 1;
+    return TRUE;
   }
 }
